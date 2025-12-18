@@ -89,7 +89,7 @@ This system separates **Cognition** (Thinking/Planning) from **Computation** (Do
 
 ```mermaid
 graph TD
-    User[User Request] -->|Natural Language| Agent[AI Orchestrator (Gemini 3 Pro)]
+    User[User Request] -->|Natural Language| Agent["AI Orchestrator (Gemini 3 Pro)"]
     
     subgraph "Cognition Layer"
         Agent -->|1. Reads| Docs[/knowledge/]

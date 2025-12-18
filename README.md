@@ -1,4 +1,4 @@
-# Agentic Orchestration Layer
+# Agentic Orchestration Layer Model
 > **Dynamic Intelligence Middleware** vs. Static Data Pipelines
 
 ## The Core Concept: "Laying Pipes on the Fly"
@@ -12,7 +12,7 @@ These "pipes" are laid hard and fast. If the data schema changes, or the busines
 
 **This project implements Agentic Orchestration.**
 
-Here, **we do not pre-define the data flow.** Instead, we give an AI Orchestrator (Google Gemini 2.5 Pro) a set of **Capabilities (Tools)** and **Knowledge (Documentation)**.
+Here, **we do not pre-define the data flow.** Instead, we give an AI Orchestrator (Google Gemini 3 Pro) a set of **Capabilities (Tools)** and **Knowledge (Documentation)**.
 
 When a request comes in, the AI **decides on the fly**:
 1.  *What* data does it need? (It reads the DB Schema docs).
@@ -35,7 +35,7 @@ Stell dir das System wie einen **intelligenten Projektmanager** vor, der Zugriff
 
 1.  **Dein Auftrag (Der Input):**
     Du stellst eine Frage, z.B. *"Berechne die Umsatzsteuer für alle US-Kunden."*
-    Das Frontend schickt diesen Text an das "Gehirn" (Gemini 2.5 Pro).
+    Das Frontend schickt diesen Text an das "Gehirn" (Gemini 3 Pro).
 
 2.  **Das "Denken" (Die Orchestrierung):**
     Das Modell bekommt nicht nur deine Frage, sondern auch eine Liste von Werkzeugen, die es benutzen darf (eine Art Werkzeugkoffer).
@@ -68,9 +68,9 @@ This architecture separates itself from standard "Chatbots" or "RAG" wrappers th
 
 ### 1. System 2 Reasoning Loop (Cognitive Layer)
 Most AI apps are "System 1" (Impulsive). They answer immediately and hallucinate.
-This system forces a **Thinking Phase** (`<thinking>`) before every action:
-- **Plans**: Generates a hypothesis.
-- **Checks**: Validates against security constraints.
+This system leverages **Gemini 3's Native Thinking** (`ThinkingLevel.HIGH`):
+- **Deep Reasoning**: The model enters an encrypted thinking process (`thoughtSignature`) to plan before it speaks.
+- **Checks**: Validates against security constraints globally.
 - **Verifies**: Writes mandatory Python assertions to prove its own results.
 
 ### 2. Runtime Code Generation (Capability Layer)
@@ -89,7 +89,7 @@ This system separates **Cognition** (Thinking/Planning) from **Computation** (Do
 
 ```mermaid
 graph TD
-    User[User Request] -->|Natural Language| Agent[AI Orchestrator (Gemini 2.5 Pro)]
+    User[User Request] -->|Natural Language| Agent[AI Orchestrator (Gemini 3 Pro)]
     
     subgraph "Cognition Layer"
         Agent -->|1. Reads| Docs[/knowledge/]
@@ -107,7 +107,7 @@ graph TD
     Agent -->|Final Answer| User
 ```
 
-### 1. The Orchestrator (Google Gemini 2.5 Pro)
+### 1. The Orchestrator (Google Gemini 3 Pro)
 The "Brain". It holds no hardcoded logic for business rules. Instead, it is instructed to:
 - **Read Documentation First**: It looks at `knowledge/` to understand the database schema and business rules.
 - **Delegate Math**: It is forbidden from doing math itself. It must write Python code to ensure accuracy.
@@ -135,7 +135,7 @@ The "Instructions".
 ## Technical Stack
 
 - **Frontend**: Next.js 14, Tailwind CSS, Lucide React (Streaming Chat UI).
-- **AI Model**: Google Gemini 2.5 Pro (via `@google/generative-ai`).
+- **AI Model**: Google Gemini 3 Pro (via `@google/generative-ai`).
 - **Database**: Supabase (PostgreSQL) with `pg_trgm` for fuzzy search.
 - **Sandbox**: E2B Code Interpreter (`@e2b/code-interpreter`).
 - **Backend Logic**: Next.js API Routes (Serverless).
@@ -198,13 +198,6 @@ The `business_rules.md` and `database_schema.md` act as the Geography of the env
 *   "You can't calculate VAT for the US." → That is a wall.
 *   "The revenue is in the orders table, not sales." → That is a path.
 
-### 3. The "Working Memory" (System 2 Thinking)
-The "Thinking" phase is the AI orienting itself within that environment.
-*   It looks at the tools (The Laws).
-*   It looks at the rules (The Constitution).
-*   It looks at the user request (The Mission).
-*   **Result**: It mentally simulates its path through the environment before it takes a step.
-
 ### Why "Environments" scale better than "Agents"
 If you build "Agents," you have to manage a dozen different personalities. If you build "Environments," you only have to manage the Data and the Rules.
 *   **Old Way**: Build a "Marketing Agent", then a "Sales Agent".
@@ -215,14 +208,13 @@ In a multi-agent system, when Agent A (The Researcher) hands off a "summary" to 
 1.  **Loss of Nuance**: Agent A decides what is important. If Agent A misses a "small" detail in a SQL schema that actually changes the math, Agent B never sees it. The context is "compressed" and therefore "corrupted."
 2.  **The "Telephone Game" Effect**: By the time you get to the 4th agent, the original user intent has been filtered through three different "personalities."
 
-**Our Single Brain Approach**: Gemini 2.5 Pro has a 2-million token context window. We don't need to swap brains. We keep the raw SQL schema, the business rules, the error logs, and the Python output all in one active "working memory." This enables **Coherent Reasoning**.
+**Our Single Brain Approach**: Gemini 3 Pro has a 2-million token context window. We don't need to swap brains. We keep the raw SQL schema, the business rules, the error logs, and the Python output all in one active "working memory." This enables **Coherent Reasoning**.
 
-### 5. "Thinking" as Internal Context, not Routing
-In this system, the `<thinking>` phase isn't just the AI "deciding what to do." It is the AI performing **"System 2" expansion**.
-*   **System 1**: Reacts. (e.g., "I will run a SQL query.")
-*   **System 2 (Your System)**: The AI says to itself: *"Wait, if I run this query on the 'Orders' table, I need to make sure I'm excluding 'Returned' items because the business rules say so."*
-
-By "thinking" before "doing," the AI is loading the correct context into its own attention mechanism. It is talking to itself to ensure its next action is grounded in the rules provided.
+### 5. "Thinking" as Internal Native Context
+In this system, we use **Gemini 3 Native Entrypted Thinking**.
+*   **Encrypted Loop**: The model produces a `thoughtSignature` with every response.
+*   **Persistence**: We capture this token and feed it back into the next turn.
+*   **Result**: The model maintains a massive, invisible "chain of thought" across the entire conversation, ensuring its next action is grounded in deep reasoning, even if you can't see the text yourself.
 
 ### 6. The "Recursive Memory" (Self-Correcting Documentation)
 Right now, the agent reads `business_rules.md` and `database_schema.md`. But true intelligence writes its own rules.
@@ -270,7 +262,7 @@ Since the agent constructs code at runtime, sometimes it breaks rules (e.g., try
 5.  **Result**: It generated a valid nested `SELECT` query and successfully got the data.
 
 
-## System 2.5 Architecture Updates (New)
+## System 3 Architecture Updates (New)
 
 We have upgraded the core loop to resemble "System 2" reasoning (Daniel Kahneman), making the AI more deliberate and transparent.
 
@@ -301,7 +293,7 @@ graph TD
 
     %% --- MIDDLE LAYER: PROCESSING ---
     subgraph Cognitive ["🧠 System 2 Cognitive Layer"]
-        Orchestrator[/"✨ AI Orchestrator<br/>(Gemini 2.5 Pro)"/]:::ai
+        Orchestrator[/"✨ AI Orchestrator<br/>(Gemini 3 Pro)"/]:::ai
         Thinking{{"Thinking Phase<br/>Plan & Hypothesize"}}:::logic
     end
 
@@ -370,13 +362,18 @@ graph TD
 ```
 
 
-### 1. Thinking Process (Visible Reasoning)
-The agent no longer just "replies." It first enters a **Thinking Mode** (`<thinking>...</thinking>`):
-- **Planning**: Breaking down complex requests into steps.
-- **Hypothesis**: Guessing potential data issues (e.g., "If tax region is null...").
-- **Tool Selection**: Explicitly choosing tools before executing them.
+### 1. Native Thinking (Encrypted Reasoning)
+The agent no longer just "replies." It uses **ThinkingLevel.HIGH**:
+- **Native Power**: We trade visible text traces for the raw power of Gemini 3's native reasoning engine.
+- **Implicit Intelligence**: The model simulates potential paths, checks for traps, and validates its plan internally.
 
-**UI**: This is visualized as a collapsible "Thinking Process" block in the chat, keeping the main interface clean while offering full transparency into the AI's logic.
+**UI**: Since thoughts are encrypted, we visualize the **Actions** that result from them.
+
+### 2. "Glass Box" Visualization
+We make the invisible visible through **Active Tooling**:
+1.  **Knowledge Access**: You see a "KNOWLEDGE ACCESS" card when the agent checks the rules.
+2.  **Tool Cards**: Every SQL query and Python script is rendered as a distinct card.
+3.  **Result**: You see the *inputs* (arguments) and *outputs* (results) of the agent's thinking.
 
 ### 2. Chronological "Stream of Consciousness"
 We refactored the rendering engine to be strictly chronological.

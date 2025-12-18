@@ -7,7 +7,7 @@ import remarkGfm from 'remark-gfm';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import Dashboard from '../components/Dashboard';
-import { ThinkingProcess } from '../components/ThinkingProcess';
+
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -21,11 +21,10 @@ type ToolCall = {
 };
 
 // New: Chronological parts
-type PartType = 'text' | 'thought_stream' | 'tool_call';
+type PartType = 'text' | 'tool_call';
 
 type MessagePart = 
   | { type: 'text', content: string }
-  | { type: 'thought_stream', thoughts: string[] }
   | { type: 'tool_call', call: ToolCall };
 
 type Message = {
@@ -127,15 +126,6 @@ export default function Home() {
                             parts[lastPartIndex] = { ...lastPart, content: lastPart.content + event.content };
                         } else {
                             parts.push({ type: 'text', content: event.content });
-                        }
-
-                    } else if (event.type === 'thought') {
-                        // Merge with previous thought_stream if exists
-                        if (lastPart && lastPart.type === 'thought_stream') {
-                            const newThoughts = [...lastPart.thoughts, event.content];
-                            parts[lastPartIndex] = { ...lastPart, thoughts: newThoughts };
-                        } else {
-                            parts.push({ type: 'thought_stream', thoughts: [event.content] });
                         }
 
                     } else if (event.type === 'tool_call') {
@@ -251,15 +241,7 @@ export default function Home() {
               
               {/* Chronological Render Loop */}
               {msg.parts.map((part, pIdx) => {
-                  if (part.type === 'thought_stream') {
-                      return (
-                          <ThinkingProcess 
-                             key={pIdx}
-                             thoughts={part.thoughts} 
-                             isComplete={!isLoading || i < messages.length - 1 || pIdx < msg.parts.length - 1} 
-                          />
-                      );
-                  }
+
                   
                   if (part.type === 'tool_call') {
                       return (

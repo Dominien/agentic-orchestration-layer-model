@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
+import { GoogleGenAI, Type, ThinkingLevel } from '@google/genai';
 import dotenv from 'dotenv';
 import path from 'path';
 import readline from 'readline';
@@ -16,9 +16,10 @@ if (!GEMINI_API_KEY) {
   process.exit(1);
 }
 
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 // Define tools for Gemini
+// The new SDK accepts tools as an array of tool objects.
 const tools = [
   {
     functionDeclarations: [
@@ -26,10 +27,10 @@ const tools = [
         name: readFileToolDefinition.name,
         description: readFileToolDefinition.description,
         parameters: {
-          type: SchemaType.OBJECT,
+          type: Type.OBJECT, // String "OBJECT" is safer than SchemaType enum if enum differs
           properties: {
              filename: {
-               type: SchemaType.STRING,
+               type: Type.STRING,
                description: readFileToolDefinition.inputSchema.shape.filename.description
              }
           },
@@ -40,10 +41,10 @@ const tools = [
         name: runReadonlySqlToolDefinition.name,
         description: runReadonlySqlToolDefinition.description,
         parameters: {
-          type: SchemaType.OBJECT,
+          type: Type.OBJECT,
           properties: {
              query: {
-               type: SchemaType.STRING,
+               type: Type.STRING,
                description: runReadonlySqlToolDefinition.inputSchema.shape.query.description
              }
           },
@@ -54,10 +55,10 @@ const tools = [
          name: runPythonToolDefinition.name,
          description: runPythonToolDefinition.description,
          parameters: {
-           type: SchemaType.OBJECT,
+           type: Type.OBJECT,
            properties: {
               code: {
-                type: SchemaType.STRING,
+                type: Type.STRING,
                 description: runPythonToolDefinition.inputSchema.shape.code.description
               }
            },
@@ -81,21 +82,22 @@ const toolMap: Record<string, Function> = {
   [render_dashboard.name]: renderDashboardTool,
 };
 
+const SYSTEM_PROMPT = "You are an autonomous orchestrator. You do not know the DB schema or rules initially. You must read the documentation in `/knowledge` first. specifically `database_schema.md`, `business_rules.md`, AND `visualization_capabilities.md` to understand your capabilities. usage of `visualization_capabilities.md` is MANDATORY for any data request.";
+
 async function main() {
-  const model = genAI.getGenerativeModel({ 
-      model: "gemini-2.5-pro",
-      tools: tools,
-      systemInstruction: "You are an autonomous orchestrator. You do not know the DB schema or rules initially. You must read the documentation in `/knowledge` first. specifically `database_schema.md`, `business_rules.md`, AND `visualization_capabilities.md` to understand your capabilities. usage of `visualization_capabilities.md` is MANDATORY for any data request."
-  });
-
-  const chat = model.startChat();
-
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
   });
 
-  console.log("Agent started. Type your request (or 'exit' to quit):");
+  // History management
+  const history: any[] = [
+      { role: "system", parts: [ { text: SYSTEM_PROMPT } ] }
+      // NOTE: Some API versions expect system instruction in config, others in history. 
+      // The new SDK usually takes config.systemInstruction. I'll put it there too to be safe.
+  ];
+
+  console.log("Agent started (Gemini 3 Native). Type your request (or 'exit' to quit):");
   
   const askQuestion = () => {
     rl.question('> ', async (userInput) => {
@@ -105,50 +107,94 @@ async function main() {
       }
 
       try {
-        let result = await chat.sendMessage(userInput);
-        let response = await result.response;
-        let functionCalls = response.functionCalls();
+        // Add user message to history
+        history.push({ role: "user", parts: [{ text: userInput }] });
 
-        // Loop to handle multiple function calls until the model answers strictly with text
-        while (functionCalls && functionCalls.length > 0) {
+        let currentTurnComplete = false;
+        
+        while (!currentTurnComplete) {
             
-            // Execute all function calls requested by the model
-            const functionResponses = await Promise.all(functionCalls.map(async (call) => {
-                const toolName = call.name;
-                const toolArgs = call.args;
-                
-                console.log(`[Agent] Calling tool: ${toolName}`, toolArgs);
-                
-                let toolResult;
-                if (toolMap[toolName]) {
-                    try {
-                        toolResult = await toolMap[toolName](toolArgs);
-                    } catch (error: any) {
-                        toolResult = `Error executing ${toolName}: ${error.message}`;
+            // Call Model
+            const response = await ai.models.generateContent({
+                model: "gemini-3-pro-preview",
+                contents: history,
+                config: {
+                    tools: tools,
+                    systemInstruction: SYSTEM_PROMPT, 
+                    thinkingConfig: {
+                        thinkingLevel: ThinkingLevel.HIGH
                     }
-                } else {
-                    toolResult = `Error: Tool ${toolName} not found.`;
                 }
+            });
 
-                console.log(`[Agent] Tool output:`, typeof toolResult === 'string' ? toolResult.substring(0, 5000) + '...' : toolResult);
-                
-                return {
-                    functionResponse: {
-                        name: toolName,
-                        response: {
-                           content: toolResult
+            // Get response
+            // The new SDK response structure:
+            // response.candidates[0].content.parts...
+            // It might also have helper methods like response.functionCalls()?
+            // We'll inspect the raw structure to be safe or use helpers if available.
+            
+            const candidate = response.candidates?.[0];
+            const content = candidate?.content;
+            const parts = content?.parts || [];
+
+            // Add model response to history
+            // CRITICAL: We must push the EXACT content object to preserve thoughtSignature if present in metadata/parts
+            history.push(content);
+
+            // Log thoughts if hidden (debug)
+            // @ts-ignore
+            if (candidate?.thoughtSignature) {
+                // @ts-ignore
+                console.log(`[System] Captured thoughtSignature: ${candidate.thoughtSignature.substring(0,20)}...`);
+            }
+
+            // Check for function calls
+            const functionCalls = parts.filter(p => p.functionCall).map(p => p.functionCall);
+
+            if (functionCalls.length > 0) {
+                 const functionResponses: any[] = [];
+
+                 // Execute tools
+                 await Promise.all(functionCalls.map(async (call: any) => {
+                    const toolName = call.name;
+                    const toolArgs = call.args;
+                    console.log(`[Agent] Calling tool: ${toolName}`, toolArgs);
+
+                    let toolResult;
+                    if (toolMap[toolName]) {
+                        try {
+                            toolResult = await toolMap[toolName](toolArgs);
+                        } catch (error: any) {
+                            toolResult = `Error executing ${toolName}: ${error.message}`;
                         }
+                    } else {
+                        toolResult = `Error: Tool ${toolName} not found.`;
                     }
-                };
-            }));
 
-            // Send tool results back to the model
-            result = await chat.sendMessage(functionResponses);
-            response = await result.response;
-            functionCalls = response.functionCalls();
+                    console.log(`[Agent] Tool output:`, typeof toolResult === 'string' ? toolResult.substring(0, 500) + '...' : toolResult);
+                    
+                    functionResponses.push({
+                        functionResponse: {
+                            name: toolName,
+                            response: { content: toolResult }
+                        }
+                    });
+                 }));
+
+                 // We need to order responses? Standard API usually matches by ID or order.
+                 // We'll just push all responses.
+                 
+                 // Add function responses to history
+                 history.push({ role: "tool", parts: functionResponses });
+                 
+                 // Loop continues (Re-Act)
+            } else {
+                 // No function calls, just text. Turn complete.
+                 const text = parts.filter(p => p.text).map(p => p.text).join('');
+                 console.log(`[Agent]: ${text}`);
+                 currentTurnComplete = true;
+            }
         }
-
-        console.log(`[Agent]: ${response.text()}`);
 
       } catch (error) {
         console.error('Error in agent loop:', error);

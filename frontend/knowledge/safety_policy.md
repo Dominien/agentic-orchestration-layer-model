@@ -25,3 +25,9 @@ The Agent MUST NOT operate on blind faith.
 ## 5. Security Sanity Checks
 *   **SQL**: Never concatenate strings into SQL queries manually if a safer pattern exists (though `run_readonly_sql` handles the connection, the logic itself should be clean).
 *   **Filesystem**: Do not attempt to read system files (`/etc/passwd`, `.env`) outside the sandbox.
+
+## 6. The "Triangulation" Protocol (MANDATORY)
+*   **Requirement**: Before delivering ANY quantitative result (revenue, count, sum, average, etc.), you MUST verify it using the `verify_integrity` tool.
+*   **Zero-Tolerance**: It is FORBIDDEN to skip this step. If `verify_integrity` fails (returns a "FAILED" status), you MUST generic a new plan to fix the logic mismatch.
+*   **No Fallbacks**: You cannot say "Triangulation failed, so here is the Python result." That is a Safety Policy Violation. You must iterate until the SQL and Python results match (Delta < 1%).
+*   **Definition**: A result is only "True" if `Result(SQL Engine) ≈ Result(Python Engine)`.

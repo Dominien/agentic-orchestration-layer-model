@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import dotenv from 'dotenv';
 import path from 'path';

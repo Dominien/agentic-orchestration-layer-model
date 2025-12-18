@@ -87,31 +87,13 @@ By visualizing the "Stream of Consciousness" (Reasoning -> Tool -> Result), we s
 
 This system separates **Cognition** (Thinking/Planning) from **Computation** (Doing/Calculating).
 
-```mermaid
-graph TD
-    User[User Request] -->|Natural Language| Agent["AI Orchestrator (Gemini 3 Pro)"]
-    
-    subgraph "Cognition Layer"
-        Agent -->|1. Reads| Docs[/knowledge/]
-        Docs -->|Schema & Rules| Agent
-    end
-    
-    subgraph "Capabilities Layer"
-        Agent -->|2. SQL Query| DB[(Supabase / Memory)]
-        Agent -->|3. Python Code| E2B[E2B Sandbox / Computation]
-    end
 
-    DB -->|Raw Data| Agent
-    E2B -->|Calculated Results| Agent
-    
-    Agent -->|Final Answer| User
-```
 
 ### 1. The Orchestrator (Google Gemini 3 Pro)
-The "Brain". It holds no hardcoded logic for business rules. Instead, it is instructed to:
-- **Read Documentation First**: It looks at `knowledge/` to understand the database schema and business rules.
+The "Brain". It operates with a **2 Million Token Context Window**, allowing us to pre-load the entire "World State" into memory.
+- **Context Loading**: We feed `knowledge/` (Schema & Rules) directly into the system prompt. The agent knows the schema *instantly* without needing to read files.
+- **Deep Planning**: It uses `ThinkingLevel.HIGH` to reason extensively about the request before taking any action.
 - **Delegate Math**: It is forbidden from doing math itself. It must write Python code to ensure accuracy.
-- **Plan Dynamically**: It constructs multi-step workflows (e.g., "Join these 3 tables, then calculate tax") based on the specific question.
 
 ### 2. Memory (Supabase / PostgreSQL)
 The "Source of Truth".

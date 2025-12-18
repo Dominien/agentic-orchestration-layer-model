@@ -24,6 +24,104 @@ The AI is not just moving data; it is **effectively writing the integration code
 
 
 ---
+    
+## Architecture Overview
+
+```mermaid
+graph TD
+    %% --- THEME & STYLING ---
+    classDef user fill:#2563eb,stroke:#1e40af,stroke-width:2px,color:white;
+    classDef ai fill:#f3e8ff,stroke:#7e22ce,stroke-width:2px,color:#4c1d95;
+    classDef db fill:#f1f5f9,stroke:#64748b,stroke-width:2px,color:#0f172a;
+    classDef logic fill:#ecfdf5,stroke:#059669,stroke-width:2px,color:#064e3b;
+    classDef sandbox fill:#fff7ed,stroke:#ea580c,stroke-width:2px,color:#7c2d12;
+    classDef error fill:#fef2f2,stroke:#dc2626,stroke-width:2px,color:#991b1b,stroke-dasharray: 5 5;
+    
+    %% Minimalistic Zone Styling
+    style Cognitive fill:#fafafa,stroke:#e5e7eb,stroke-width:1px,rx:10,ry:10
+    style Supervisor fill:#fafafa,stroke:#e5e7eb,stroke-width:1px,rx:10,ry:10
+    style Triangulation fill:#fafafa,stroke:#e5e7eb,stroke-width:1px,rx:10,ry:10
+    style PathA fill:#ffffff,stroke:#cbd5e1,stroke-width:1px,stroke-dasharray: 5 5
+    style PathB fill:#ffffff,stroke:#cbd5e1,stroke-width:1px,stroke-dasharray: 5 5
+
+    %% --- TOP LAYER: INPUTS & CONTEXT ---
+    %% We group these loosely at the top to avoid the "Side Block" issue
+    User([👤 User Request]):::user
+    Schema[("Database Map")]:::db
+    Rules[("Constitution")]:::db
+    Lessons[("Learned Memory")]:::db
+
+    %% --- MIDDLE LAYER: PROCESSING ---
+    subgraph Cognitive ["🧠 System 2 Cognitive Layer"]
+        Orchestrator[/"✨ AI Orchestrator<br/>(Gemini 3 Pro)"/]:::ai
+        Thinking{{"Thinking Phase<br/>Plan & Hypothesize"}}:::logic
+    end
+
+    subgraph Supervisor ["🛡️ Supervisor Layer"]
+        Policy["Safety Policy"]:::logic
+        Assert{"Has Assertions?"}:::logic
+    end
+
+    subgraph Triangulation ["⚖️ Triangulation Protocol"]
+        direction TB
+        
+        subgraph PathA ["Path A: Source"]
+            SQLTool[("SQL Execution")]:::db
+            ResultA[/Scalar A/]:::db
+        end
+
+        subgraph PathB ["Path B: Calc"]
+            PyTool["Python Sandbox"]:::sandbox
+            ResultB[/Scalar B/]:::sandbox
+        end
+        
+        Compare{"Consensus Gate<br/>(Delta < 1%)"}:::logic
+    end
+
+    Reflection{"Reflection Loop"}:::ai
+    Output([🚀 Render Dashboard]):::user
+    
+    %% Error Handling
+    Error("⚠️ Consensus Fail"):::error
+    WriteMem("📝 Write Lesson"):::sandbox
+
+    %% --- CONNECTIONS ---
+    
+    %% 1. Top Down Flow
+    User --> Orchestrator
+    Schema & Rules & Lessons -.-> Orchestrator
+    
+    %% 2. Cognition
+    Orchestrator --> Thinking
+    Thinking --> Policy
+    Policy --> Assert
+    
+    %% 3. Safety Split
+    Assert -- "❌ Unsafe" --> Error
+    Assert -- "✅ Safe" --> SQLTool & PyTool
+    
+    %% 4. Execution
+    SQLTool --> ResultA
+    PyTool --> ResultB
+    ResultA & ResultB --> Compare
+    
+    %% 5. Decision
+    Compare -- "Mismatch" --> Error
+    Compare -- "Verified" --> Reflection
+    
+    Reflection -- "Illogical" --> Error
+    Reflection -- "Sound" --> Output
+    
+    %% 6. Self-Healing Loop
+    Error --> WriteMem
+    WriteMem -.-> Lessons
+    WriteMem -.-> Orchestrator
+
+    %% Link Styling
+    linkStyle default stroke:#94a3b8,stroke-width:2px;
+```
+
+---
 
 ## Wie das System funktioniert (Einfache Erklärung)
 
@@ -249,99 +347,7 @@ Since the agent constructs code at runtime, sometimes it breaks rules (e.g., try
 We have upgraded the core loop to resemble "System 2" reasoning (Daniel Kahneman), making the AI more deliberate and transparent.
 
 ### Architecture Overview
-```mermaid
-graph TD
-    %% --- THEME & STYLING ---
-    classDef user fill:#2563eb,stroke:#1e40af,stroke-width:2px,color:white;
-    classDef ai fill:#f3e8ff,stroke:#7e22ce,stroke-width:2px,color:#4c1d95;
-    classDef db fill:#f1f5f9,stroke:#64748b,stroke-width:2px,color:#0f172a;
-    classDef logic fill:#ecfdf5,stroke:#059669,stroke-width:2px,color:#064e3b;
-    classDef sandbox fill:#fff7ed,stroke:#ea580c,stroke-width:2px,color:#7c2d12;
-    classDef error fill:#fef2f2,stroke:#dc2626,stroke-width:2px,color:#991b1b,stroke-dasharray: 5 5;
-    
-    %% Minimalistic Zone Styling
-    style Cognitive fill:#fafafa,stroke:#e5e7eb,stroke-width:1px,rx:10,ry:10
-    style Supervisor fill:#fafafa,stroke:#e5e7eb,stroke-width:1px,rx:10,ry:10
-    style Triangulation fill:#fafafa,stroke:#e5e7eb,stroke-width:1px,rx:10,ry:10
-    style PathA fill:#ffffff,stroke:#cbd5e1,stroke-width:1px,stroke-dasharray: 5 5
-    style PathB fill:#ffffff,stroke:#cbd5e1,stroke-width:1px,stroke-dasharray: 5 5
 
-    %% --- TOP LAYER: INPUTS & CONTEXT ---
-    %% We group these loosely at the top to avoid the "Side Block" issue
-    User([👤 User Request]):::user
-    Schema[("Database Map")]:::db
-    Rules[("Constitution")]:::db
-    Lessons[("Learned Memory")]:::db
-
-    %% --- MIDDLE LAYER: PROCESSING ---
-    subgraph Cognitive ["🧠 System 2 Cognitive Layer"]
-        Orchestrator[/"✨ AI Orchestrator<br/>(Gemini 3 Pro)"/]:::ai
-        Thinking{{"Thinking Phase<br/>Plan & Hypothesize"}}:::logic
-    end
-
-    subgraph Supervisor ["🛡️ Supervisor Layer"]
-        Policy["Safety Policy"]:::logic
-        Assert{"Has Assertions?"}:::logic
-    end
-
-    subgraph Triangulation ["⚖️ Triangulation Protocol"]
-        direction TB
-        
-        subgraph PathA ["Path A: Source"]
-            SQLTool[("SQL Execution")]:::db
-            ResultA[/Scalar A/]:::db
-        end
-
-        subgraph PathB ["Path B: Calc"]
-            PyTool["Python Sandbox"]:::sandbox
-            ResultB[/Scalar B/]:::sandbox
-        end
-        
-        Compare{"Consensus Gate<br/>(Delta < 1%)"}:::logic
-    end
-
-    Reflection{"Reflection Loop"}:::ai
-    Output([🚀 Render Dashboard]):::user
-    
-    %% Error Handling
-    Error("⚠️ Consensus Fail"):::error
-    WriteMem("📝 Write Lesson"):::sandbox
-
-    %% --- CONNECTIONS ---
-    
-    %% 1. Top Down Flow
-    User --> Orchestrator
-    Schema & Rules & Lessons -.-> Orchestrator
-    
-    %% 2. Cognition
-    Orchestrator --> Thinking
-    Thinking --> Policy
-    Policy --> Assert
-    
-    %% 3. Safety Split
-    Assert -- "❌ Unsafe" --> Error
-    Assert -- "✅ Safe" --> SQLTool & PyTool
-    
-    %% 4. Execution
-    SQLTool --> ResultA
-    PyTool --> ResultB
-    ResultA & ResultB --> Compare
-    
-    %% 5. Decision
-    Compare -- "Mismatch" --> Error
-    Compare -- "Verified" --> Reflection
-    
-    Reflection -- "Illogical" --> Error
-    Reflection -- "Sound" --> Output
-    
-    %% 6. Self-Healing Loop
-    Error --> WriteMem
-    WriteMem -.-> Lessons
-    WriteMem -.-> Orchestrator
-
-    %% Link Styling
-    linkStyle default stroke:#94a3b8,stroke-width:2px;
-```
 
 
 ### 1. Native Thinking (Encrypted Reasoning)

@@ -190,9 +190,9 @@ This system separates **Cognition** (Thinking/Planning) from **Computation** (Do
 
 ### 1. The Orchestrator (Google Gemini 3 Pro)
 The "Brain". It operates with a **2 Million Token Context Window**, allowing the entire "World State" to be pre-loaded into memory.
-- **Context Loading**: `knowledge/` (Schema & Rules) is fed directly into the system prompt. The agent knows the schema *instantly* without needing to read files.
-- **Deep Planning**: It uses `ThinkingLevel.HIGH` to reason extensively about the request before taking any action.
-- **Delegate Math**: It is forbidden from doing math itself. It must write Python code to ensure accuracy.
+- **Context Loading**: `knowledge/` (Schema, Rules, Memory, Capabilities) is fed directly into the system prompt. The agent knows the schema and rules *instantly* without needing to read files.
+- **Deep Planning**: It uses `ThinkingLevel.HIGH` to reason extensively before taking any action.
+- **Tools**: It has access to 7 core tools: `run_readonly_sql`, `run_python`, `read_file`, `render_dashboard`, `add_learned_lesson`, `verify_integrity`, and internal knowledge access.
 
 ### 2. Memory (Supabase / PostgreSQL)
 The "Source of Truth".
@@ -200,15 +200,28 @@ The "Source of Truth".
 - A single **Generic SQL Tool (`run_readonly_sql`)** is provided.
 - The Agent learns the schema from `database_schema.md` and writes valid SQL to answer *any* question.
 
-### 3. Computation (E2B Sandbox)
+### 3. Computation & Logic (E2B Sandbox)
 The "Calculator".
 - LLMs are bad at math and logic execution.
 - A **Python Sandbox Tool (`run_python`)** is provided.
+- **File System**: The agent can read local files via `read_file` to analyze code or logs.
 - The Agent sends code to this secure environment to perform aggregations, tax calculations, and data processing.
 
+### 4. Visualization (`render_dashboard`)
+The "Presenter".
+- The agent doesn't just output text.
+- It can dynamically render React components using the `render_dashboard` tool.
+- Supported Widgets: Bar Charts, Line Charts, Pie Charts, Stat Cards, and Progress Bars (defined in `visualization_capabilities.md`).
+
 ### 4. Knowledge Base (`/knowledge`)
-The "Instructions".
-- `business_rules.md` is simply updated. The Agent reads the new rule next time it runs and adapts immediately.
+The "Instructions". The agent reads these files to understand its world:
+1.  `database_schema.md`: The map of all SQL tables and columns.
+2.  `business_rules.md`: Law of the land (Tax rates, permissions).
+3.  `agent_memory.md`: Learned lessons from previous errors (Self-correction).
+4.  `visualization_capabilities.md`: Documentation on which UI widgets are available.
+5.  `safety_policy.md`: The output filters and triangulation requirements.
+
+`business_rules.md` is simply updated. The Agent reads the new rule next time it runs and adapts immediately.
 
 ---
 
@@ -318,7 +331,7 @@ Right now, the agent reads `business_rules.md` and `database_schema.md`. But tru
 A mandatory validation step has been added to prevent "Math Hallucinations".
 *   **The Constitution**: `safety_policy.md` defines the laws of physics for the code (e.g., "Must use Assertions", "No Infinite Loops").
 *   **The Hard Verifier**: The `run_python` tool *rejects* any code that lacks `assert` statements. The Agent *must* write tests for its own code vs the Safety Policy.
-*   **The Logic Check Loop**: After every tool execution, the Agent performs a mandatory `<reflection>`: *"Does this result make sense?"* (e.g., "Can Revenue be negative?"). If No, it self-corrects before you ever see the bad number.
+*   **Self-Correction**: If the agent makes a mistake, it uses `add_learned_lesson` to record the fix in `agent_memory.md` so it never happens again.
 
 ### 8. The "Consensus & Verification Loop" (Triangulation)
 The architecture has moved from a "Fire-and-Forget" model to a **"Triangulation"** architecture for all quantitative questions.

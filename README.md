@@ -3,7 +3,7 @@
 
 ## The Core Concept: "Laying Pipes on the Fly"
 
-In traditional software architecture, developers build **Static Middleware**. We explicitly define:
+In traditional software architecture, developers build **Static Middleware**. They explicitly define:
 1.  "Fetch data from Endpoint A."
 2.  "Transform it using Logic B."
 3.  "Send it to Service C."
@@ -12,7 +12,7 @@ These "pipes" are laid hard and fast. If the data schema changes, or the busines
 
 **This project implements Agentic Orchestration.**
 
-Here, **we do not pre-define the data flow.** Instead, we give an AI Orchestrator (Google Gemini 3 Pro) a set of **Capabilities (Tools)** and **Knowledge (Documentation)**.
+Here, **the data flow is not pre-defined.** Instead, an AI Orchestrator (Google Gemini 3 Pro) is given a set of **Capabilities (Tools)** and **Knowledge (Documentation)**.
 
 When a request comes in, the AI **decides on the fly**:
 1.  *What* data does it need? (It reads the DB Schema docs).
@@ -45,7 +45,7 @@ graph TD
     style PathB fill:#ffffff,stroke:#cbd5e1,stroke-width:1px,stroke-dasharray: 5 5
 
     %% --- TOP LAYER: INPUTS & CONTEXT ---
-    %% We group these loosely at the top to avoid the "Side Block" issue
+    %% These are grouped loosely at the top to avoid the "Side Block" issue
     User([👤 User Request]):::user
     Schema[("Database Map")]:::db
     Rules[("Constitution")]:::db
@@ -172,12 +172,12 @@ This system leverages **Gemini 3's Native Thinking** (`ThinkingLevel.HIGH`):
 - **Verifies**: Writes mandatory Python assertions to prove its own results.
 
 ### 2. Runtime Code Generation (Capability Layer)
-We do not use standard RAG (Retrieval Augmented Generation). We use **CAG (Code Augmented Generation)**.
+Standard RAG (Retrieval Augmented Generation) is not used. **CAG (Code Augmented Generation)** is used instead.
 - **Competitors**: "Here is a text summary of your data." (Probabilistic/Fuzzy).
 - **This Agent**: "I wrote a Python script to calculate this exactly. Here is the code and the verified result." (Deterministic/Precise).
 
 ### 3. The "Glass Box" Trust Engine
-By visualizing the "Stream of Consciousness" (Reasoning -> Tool -> Result), we solve the "Black Box" trust problem. The user sees exactly *how* the answer was derived.
+By visualizing the "Stream of Consciousness" (Reasoning -> Tool -> Result), the "Black Box" trust problem is solved. The user sees exactly *how* the answer was derived.
 
 ---
 
@@ -188,27 +188,26 @@ This system separates **Cognition** (Thinking/Planning) from **Computation** (Do
 
 
 ### 1. The Orchestrator (Google Gemini 3 Pro)
-The "Brain". It operates with a **2 Million Token Context Window**, allowing us to pre-load the entire "World State" into memory.
-- **Context Loading**: We feed `knowledge/` (Schema & Rules) directly into the system prompt. The agent knows the schema *instantly* without needing to read files.
+The "Brain". It operates with a **2 Million Token Context Window**, allowing the entire "World State" to be pre-loaded into memory.
+- **Context Loading**: `knowledge/` (Schema & Rules) is fed directly into the system prompt. The agent knows the schema *instantly* without needing to read files.
 - **Deep Planning**: It uses `ThinkingLevel.HIGH` to reason extensively about the request before taking any action.
 - **Delegate Math**: It is forbidden from doing math itself. It must write Python code to ensure accuracy.
 
 ### 2. Memory (Supabase / PostgreSQL)
 The "Source of Truth".
-- We do not write custom API endpoints for every query.
-- We provide a single **Generic SQL Tool (`run_readonly_sql`)**.
+- Custom API endpoints for every query are not written.
+- A single **Generic SQL Tool (`run_readonly_sql`)** is provided.
 - The Agent learns the schema from `database_schema.md` and writes valid SQL to answer *any* question.
 
 ### 3. Computation (E2B Sandbox)
 The "Calculator".
 - LLMs are bad at math and logic execution.
-- We provide a **Python Sandbox Tool (`run_python`)**.
+- A **Python Sandbox Tool (`run_python`)** is provided.
 - The Agent sends code to this secure environment to perform aggregations, tax calculations, and data processing.
 
 ### 4. Knowledge Base (`/knowledge`)
 The "Instructions".
-- If business rules change (e.g., Tax Rate goes from 5% to 10%), we **do not change code**.
-- We simply update `business_rules.md`. The Agent reads the new rule next time it runs and adapts immediately.
+- `business_rules.md` is simply updated. The Agent reads the new rule next time it runs and adapts immediately.
 
 ---
 
@@ -275,38 +274,38 @@ This architecture is optimized for **High-Complexity, High-Variance Data Environ
 
 ## The Paradigm Shift: From Personas to Environments
 
-Most people think an AI Agent is a "person" (a persona). We treat an Agent as a **State Machine + Contextual Environment**.
+Most people think an AI Agent is a "person" (a persona). This project treats an Agent as a **State Machine + Contextual Environment**.
 
-By building an "Environment" rather than a "Chatbot," we provide the AI with three things it lacks out-of-the-box:
+By building an "Environment" rather than a "Chatbot," the AI is provided with three things it lacks out-of-the-box:
 
 ### 1. The "Physical" Law (Tools & Sandboxes)
-An LLM in a vacuum can only talk. By giving it an Environment (E2B + SQL), we give it "physics."
+An LLM in a vacuum can only talk. By giving it an Environment (E2B + SQL), it gains "physics."
 *   In the real world, if you drop a ball, it falls.
 *   In this environment, if the AI writes a syntax error, the environment "pushes back" with an error message.
 *   **Result**: The AI learns the limits of its world and adjusts. It’s no longer "hallucinating" in a void; it’s "interacting" with a system.
 
 ### 2. The "Constitution" (Rules & Schema)
 The `business_rules.md` and `database_schema.md` act as the Geography of the environment.
-*   We don't tell the AI *what* to think; we tell it *where the walls are*.
+*   The AI is not told *what* to think; it is told *where the walls are*.
 *   "You can't calculate VAT for the US." → That is a wall.
 *   "The revenue is in the orders table, not sales." → That is a path.
 
 ### Why "Environments" scale better than "Agents"
 If you build "Agents," you have to manage a dozen different personalities. If you build "Environments," you only have to manage the Data and the Rules.
 *   **Old Way**: Build a "Marketing Agent", then a "Sales Agent".
-*   **Our Way**: Drop `marketing_data.sql` and `branding_rules.md` into the Environment. The Brain (Gemini) stays the same, but the "Contextual World" changes.
+*   **This Way**: Drop `marketing_data.sql` and `branding_rules.md` into the Environment. The Brain (Gemini) stays the same, but the "Contextual World" changes.
 
 ### 4. The "Multi-Agent" Context Tax
 In a multi-agent system, when Agent A (The Researcher) hands off a "summary" to Agent B (The Analyst), two things happen:
 1.  **Loss of Nuance**: Agent A decides what is important. If Agent A misses a "small" detail in a SQL schema that actually changes the math, Agent B never sees it. The context is "compressed" and therefore "corrupted."
 2.  **The "Telephone Game" Effect**: By the time you get to the 4th agent, the original user intent has been filtered through three different "personalities."
 
-**Our Single Brain Approach**: Gemini 3 Pro has a 2-million token context window. We don't need to swap brains. We keep the raw SQL schema, the business rules, the error logs, and the Python output all in one active "working memory." This enables **Coherent Reasoning**.
+**Single Brain Approach**: Gemini 3 Pro has a 2-million token context window. There is no need to swap brains. The raw SQL schema, the business rules, the error logs, and the Python output are all kept in one active "working memory." This enables **Coherent Reasoning**.
 
 ### 5. "Thinking" as Internal Native Context
-In this system, we use **Gemini 3 Native Entrypted Thinking**.
+In this system, **Gemini 3 Native Entrypted Thinking** is used.
 *   **Encrypted Loop**: The model produces a `thoughtSignature` with every response.
-*   **Persistence**: We capture this token and feed it back into the next turn.
+*   **Persistence**: This token is captured and fed back into the next turn.
 *   **Result**: The model maintains a massive, invisible "chain of thought" across the entire conversation, ensuring its next action is grounded in deep reasoning, even if you can't see the text yourself.
 
 ### 6. The "Recursive Memory" (Self-Correcting Documentation)
@@ -315,15 +314,15 @@ Right now, the agent reads `business_rules.md` and `database_schema.md`. But tru
 *   **The Leverage**: Next time, it reads its own journal and avoids the mistake. This builds a system that compounds its own IQ over time without human intervention.
 
 ### 7. The "Supervisor Layer" (The Logic Check)
-We have added a mandatory validation step to prevent "Math Hallucinations".
+A mandatory validation step has been added to prevent "Math Hallucinations".
 *   **The Constitution**: `safety_policy.md` defines the laws of physics for the code (e.g., "Must use Assertions", "No Infinite Loops").
 *   **The Hard Verifier**: The `run_python` tool *rejects* any code that lacks `assert` statements. The Agent *must* write tests for its own code vs the Safety Policy.
 *   **The Logic Check Loop**: After every tool execution, the Agent performs a mandatory `<reflection>`: *"Does this result make sense?"* (e.g., "Can Revenue be negative?"). If No, it self-corrects before you ever see the bad number.
 
 ### 8. The "Consensus & Verification Loop" (Triangulation)
-We have moved from a "Fire-and-Forget" architecture to a **"Triangulation"** architecture for all quantitative questions.
+The architecture has moved from a "Fire-and-Forget" model to a **"Triangulation"** architecture for all quantitative questions.
 *   **The Problem**: LLMs are probabilistic. They can "hallucinate" a number.
-*   **The Solution**: We enforce a **Triangulation Protocol** ($V_{truth}$) using the `verify_integrity` tool.
+*   **The Solution**: A **Triangulation Protocol** ($V_{truth}$) is enforced using the `verify_integrity` tool.
 *   **How it works**:
     1.  **Path A (SQL)**: The Agent writes a SQL query to calculate the metric directly in the Database.
     2.  **Path B (Python)**: The Agent fetches the raw data and recalculates the same metric using Pandas in a sandbox.
@@ -357,7 +356,7 @@ Since the agent constructs code at runtime, sometimes it breaks rules (e.g., try
 
 ## System 3 Architecture Updates (New)
 
-We have upgraded the core loop to resemble "System 2" reasoning (Daniel Kahneman), making the AI more deliberate and transparent.
+The core loop has been upgraded to resemble "System 2" reasoning (Daniel Kahneman), making the AI more deliberate and transparent.
 
 ### Architecture Overview
 
@@ -365,19 +364,19 @@ We have upgraded the core loop to resemble "System 2" reasoning (Daniel Kahneman
 
 ### 1. Native Thinking (Encrypted Reasoning)
 The agent no longer just "replies." It uses **ThinkingLevel.HIGH**:
-- **Native Power**: We trade visible text traces for the raw power of Gemini 3's native reasoning engine.
+- **Native Power**: Visible text traces are traded for the raw power of Gemini 3's native reasoning engine.
 - **Implicit Intelligence**: The model simulates potential paths, checks for traps, and validates its plan internally.
 
 **UI**: Since thoughts are encrypted, we visualize the **Actions** that result from them.
 
 ### 2. "Glass Box" Visualization
-We make the invisible visible through **Active Tooling**:
+The invisible is made visible through **Active Tooling**:
 1.  **Knowledge Access**: You see a "KNOWLEDGE ACCESS" card when the agent checks the rules.
 2.  **Tool Cards**: Every SQL query and Python script is rendered as a distinct card.
 3.  **Result**: You see the *inputs* (arguments) and *outputs* (results) of the agent's thinking.
 
 ### 2. Chronological "Stream of Consciousness"
-We refactored the rendering engine to be strictly chronological.
+The rendering engine was refactored to be strictly chronological.
 - **Old Way**: Thoughts bucketed at the top, tools in the middle, text at the bottom.
 - **New Way**: A linear timeline.
   1. `Thinking: "I need to check schema"`
@@ -388,5 +387,5 @@ We refactored the rendering engine to be strictly chronological.
   
 This allows users to follow the **exact sequence of cause and effect**.
 
-- **Chronological Flow**: We refactored the rendering engine to be strictly chronological, allowing users to follow the **exact sequence of cause and effect**.
+- **Chronological Flow**: The rendering engine was refactored to be strictly chronological, allowing users to follow the **exact sequence of cause and effect**.
 - **Streaming Feedback**: To prevent the "Uncanny Valley" of silence, we implemented a **Persistent Streaming Indicator** that displays "Executing..." or "Generating..." to confirm the agent is working in the background.

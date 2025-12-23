@@ -214,11 +214,24 @@ The "Instructions".
 
 ## Technical Stack
 
-- **Frontend**: Next.js 14, Tailwind CSS, Lucide React (Streaming Chat UI).
-- **AI Model**: Google Gemini 3 Pro (via `@google/generative-ai`).
-- **Database**: Supabase (PostgreSQL) with `pg_trgm` for fuzzy search.
-- **Sandbox**: E2B Code Interpreter (`@e2b/code-interpreter`).
-- **Backend Logic**: Next.js API Routes (Serverless).
+### Frontend Application
+*   **Framework:** [Next.js 16](https://nextjs.org/) (App Router, Server Actions)
+*   **Language:** TypeScript
+*   **Styling:** [Tailwind CSS v4](https://tailwindcss.com/)
+    *   Utilities: `clsx`, `tailwind-merge`
+*   **UI Components:**
+    *   Icons: `lucide-react`
+    *   Animations: `framer-motion`
+    *   Charts: `recharts`
+    *   Markdown: `react-markdown`, `remark-gfm`
+
+### Intelligence & Backend
+*   **AI Model:** [Google Gemini 3 Pro](https://deepmind.google/technologies/gemini/)
+    *   SDK: `@google/genai` (Node.js)
+*   **Database:** [Supabase](https://supabase.com/) (PostgreSQL)
+*   **Sandboxing:** [E2B](https://e2b.dev/) (Rule-based Code Interpreter)
+*   **Runtime:** Node.js (v20+)
+*   **Validation:** `zod`
 
 ## Use Case Example
 
@@ -375,6 +388,5 @@ We refactored the rendering engine to be strictly chronological.
   
 This allows users to follow the **exact sequence of cause and effect**.
 
-### 3. Silent Execution & "Zero-Gap" Feedback
-- **Silent Execution**: The agent is forbidden from narrating its plan in the text channel ("I will now do X..."). All planning happens in `<thinking>` blocks. The text channel is reserved Key Results and Executive Summaries.
-- **Streaming Feedback**: To prevent the "Uncanny Valley" of silence between Thinking and Output, we implemented a **Persistent Streaming Indicator** that displays "Executing..." or "Generating..." to confirm the agent is working in the background.
+- **Chronological Flow**: We refactored the rendering engine to be strictly chronological, allowing users to follow the **exact sequence of cause and effect**.
+- **Streaming Feedback**: To prevent the "Uncanny Valley" of silence, we implemented a **Persistent Streaming Indicator** that displays "Executing..." or "Generating..." to confirm the agent is working in the background.

@@ -18,7 +18,8 @@ When a request comes in, the AI **decides on the fly**:
 1.  *What* data does it need? (It reads the DB Schema docs).
 2.  *How* should I get it? (It constructs a custom SQL query).
 3.  *How* should I process it? (It writes and executes a Python script in a secure sandbox).
-4.  *How* should I present it? (It formats the final answer).
+4.  *Is it correct?* (It verifies the result using the Triangulation Protocol).
+5.  *How* should I present it? (It formats the final answer).
 
 The AI is not just moving data; it is **effectively writing the integration code at runtime**, specifically tailored for that exact user request.
 
